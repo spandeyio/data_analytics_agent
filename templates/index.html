@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Analytics Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #f8fafc;
+            --bg-gradient-end: #e2e8f0;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-primary: #334155;
+            --text-secondary: #64748b;
+            --accent: #6366f1; /* Indigo-500 */
+            --accent-hover: #4f46e5;
+            --user-msg-bg: #6366f1;
+            --ai-msg-bg: #ffffff;
+            --success: #10b981;
+            --shadow-soft: 0 4px 20px rgba(148, 163, 184, 0.15);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Main Chat Area */
+        main {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 60px rgba(0,0,0,0.05);
+            height: 100%;
+            border-left: 1px solid rgba(255,255,255,0.5);
+            border-right: 1px solid rgba(255,255,255,0.5);
+        }
+
+        #chat-container {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            width: 100%;
+            display: flex;
+            gap: 16px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            color: white;
+        }
+        
+        .message:hover .avatar { transform: scale(1.1); }
+
+        .message.user { flex-direction: row-reverse; }
+        .message.user .avatar { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        .message.ai .avatar { background: linear-gradient(135deg, #10b981, #34d399); }
+
+        .bubble {
+            padding: 16px 24px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            box-shadow: var(--shadow-soft);
+            max-width: 85%;
+            position: relative;
+        }
+
+        .message.user .bubble {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+
+        .message.ai .bubble {
+            background-color: var(--ai-msg-bg);
+            color: var(--text-primary);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 18px 18px 18px 4px;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Table Styling */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        th {
+            background-color: #f8fafc;
+            padding: 14px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #f1f5f9;
+            color: var(--text-primary);
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f8fafc; }
+
+        /* Footer / Input Area */
+        footer {
+            padding: 20px 40px 30px 40px;
+            background: linear-gradient(to top, rgba(255,255,255,0.9), rgba(255,255,255,0));
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-wrapper {
+            width: 100%;
+            position: relative;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(148, 163, 184, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 8px 30px rgba(148, 163, 184, 0.2);
+            transform: translateY(-2px);
+            background: #ffffff;
+        }
+
+        #message-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 16px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+        }
+        
+        #message-input::placeholder { color: #94a3b8; }
+
+        #send-btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 28px;
+            margin-right: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+        }
+
+        #send-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(99, 102, 241, 0.3);
+        }
+
+        #send-btn:active { transform: translateY(1px); }
+
+        /* Suggestions */
+        #suggestions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 5px;
+            perspective: 1000px;
+        }
+        
+        @media (min-width: 1024px) {
+            #suggestions { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .suggestion-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 14px 18px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.4;
+            opacity: 0;
+            animation: fadeInStagger 0.5s ease forwards;
+            box-shadow: 0 2px 4px rgba(148, 163, 184, 0.05);
+        }
+        
+        .suggestion-card:nth-child(1) { animation-delay: 0.1s; }
+        .suggestion-card:nth-child(2) { animation-delay: 0.15s; }
+        .suggestion-card:nth-child(3) { animation-delay: 0.2s; }
+        .suggestion-card:nth-child(4) { animation-delay: 0.25s; }
+        .suggestion-card:nth-child(5) { animation-delay: 0.3s; }
+        .suggestion-card:nth-child(6) { animation-delay: 0.35s; }
+        .suggestion-card:nth-child(7) { animation-delay: 0.4s; }
+        .suggestion-card:nth-child(8) { animation-delay: 0.45s; }
+
+        @keyframes fadeInStagger {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .suggestion-card:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #f8fafc;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(148, 163, 184, 0.15);
+        }
+
+        .suggestion-card svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            opacity: 0.8;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Typing Indicator */
+        .typing {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            margin-left: 60px;
+            margin-bottom: 20px;
+        }
+
+        .typing span {
+            width: 6px;
+            height: 6px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+
+        .typing span:nth-child(1) { animation-delay: -0.32s; }
+        .typing span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="chat-container">
+            <!-- Messages will appear here -->
+            {% for msg in history %}
+                <div class="message {{ msg.role }}">
+                    <div class="avatar">{{ "U" if msg.role == 'user' else "AI" }}</div>
+                    <div class="bubble">{{ msg.content | safe }}</div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div id="typing" class="typing">
+            <span></span><span></span><span></span>
+        </div>
+
+        <footer>
+            <div id="suggestions">
+                <!-- Advanced Suggestions -->
+                <div class="suggestion-card" onclick="usePrompt('Analyze the correlation between temperature spikes (>85°C) and vibration anomalies in Unit-A over the last 30 days.')">
+                    <svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                    Analyze Temp (>85°C) vs Vibration Correlation (Unit-A)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Identify sensors showing gradual pressure decay (potential leak) while maintaining Normal status.')">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    Detect Hidden Pressure Decay (Potential Leaks)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Compare the efficiency of Unit-A vs Unit-B by calculating the ratio of Critical to Normal events.')">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    Compare Efficiency: Unit-A vs Unit-B (Critical Ratio)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('List the top 5 sensors with the highest frequency of status changes (instability) in the past week.')">
+                    <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+                    Top 5 Unstable Sensors (Freq Status Change)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Detect potential sensor drift: Show sensors where temperature variance is > 20% from the unit average.')">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z"/></svg>
+                    Detect Sensor Drift (>20% Variance)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Forecast maintenance needs: Find sensors with >3 Warning events and high vibration (>0.7g).')">
+                    <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+                    Forecast Maintenance (Warnings + Vibration)
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Show a heat map summary of critical failures by hour of day (00:00 - 23:00) for all regions.')">
+                    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                    Heat Map: Critical Failures by Hour
+                </div>
+                <div class="suggestion-card" onclick="usePrompt('Investigate Unit-C: Correlate high pressure readings with specific sensor IDs.')">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    Investigate Unit-C: Pressure vs Sensor ID
+                </div>
+            </div>
+
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="Query your sensor data..." autocomplete="off">
+                <button id="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const input = document.getElementById('message-input');
+        const typing = document.getElementById('typing');
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        function usePrompt(text) {
+            input.value = text;
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add User Message
+            addMessage('user', message);
+            input.value = '';
+            
+            // Show typing
+            typing.style.display = 'flex';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                
+                // Add AI Message
+                typing.style.display = 'none';
+                addMessage('ai', data.response);
+            } catch (error) {
+                console.error('Error:', error);
+                typing.style.display = 'none';
+                addMessage('ai', 'Error connecting to the analysis engine.');
+            }
+        }
+
+        function addMessage(role, content) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.innerText = role === 'user' ? 'U' : 'AI';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = content;
+            
+            div.appendChild(avatar);
+            div.appendChild(bubble);
+            
+            chatContainer.appendChild(div);
+            // Trigger animation
+            requestAnimationFrame(() => {
+                div.style.opacity = '1';
+                div.style.transform = 'translateY(0)';
+            });
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
