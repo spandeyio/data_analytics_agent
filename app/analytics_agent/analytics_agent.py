@@ -1,24 +1,20 @@
 from langchain.agents import create_agent
-from langchain_google_genai import ChatGoogleGenerativeAI
-from app.config import get_settings
+from app.utils.llm import LLM
 from app.analytics_agent.tools import execute_sql
-from app.analytics_agent.prompt import SYSTEM_PROMPT
+from app.analytics_agent.prompt import SYSTEM_PROMPT_TEMPLATE
 
-settings = get_settings()
-
-def get_agent():
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-3-pro-preview",
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0
-    )
+def get_agent(table_info: str):
+    llm_instance = LLM()
+    llm = llm_instance.get_llm()
     
     tools = [execute_sql]
+    
+    formatted_prompt = SYSTEM_PROMPT_TEMPLATE.format(table_info=table_info)
     
     agent = create_agent(
         model=llm,
         tools=tools,
-        system_prompt=SYSTEM_PROMPT
+        system_prompt=formatted_prompt
     )
     
     return agent
